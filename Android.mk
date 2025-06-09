@@ -87,6 +87,9 @@ endif
 ifneq ($(TARGET_POWERHAL_MODE_EXT),)
     LOCAL_CFLAGS += -DMODE_EXT
     LOCAL_SRC_FILES += ../../../../$(TARGET_POWERHAL_MODE_EXT)
+else ifneq ($(TARGET_POWERHAL_MODE_EXT_LIB),)
+    LOCAL_CFLAGS += -DMODE_EXT
+    LOCAL_STATIC_LIBRARIES += $(TARGET_POWERHAL_MODE_EXT_LIB)
 endif
 
 LOCAL_MODULE := android.hardware.power-service
