@@ -7,6 +7,16 @@
 -->
 <HintConfigs>
     <Powerhint>
+        <!-- AIDL interaction boost. Reuse each target's light-scroll WALT frequencies. -->
+        <Config
+            Id="0x00001202" Enable="true" Target="pineapple" Timeout="100"
+            Resources="0x4080C000, 998000, 0x4080C200, 998000, 0x4080C300, 998000,
+                       0x40808000, 600000, 0x40808200, 800000, 0x40808300, 600000" />
+
+        <Config
+            Id="0x00001202" Enable="true" Target="cliffs" Timeout="100"
+            Resources="0x4080C000, 1056000, 0x40808000, 633000" />
+
         <!--video encode 30 fps-->
         <Config
             Id="0x00001203" Enable="true" Target="pineapple,cliffs"
