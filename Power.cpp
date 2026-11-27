@@ -47,6 +47,7 @@ static const char *pkg = "QTI PowerHAL";
 
 #include "utils.h"
 #include "Power.h"
+#include "hint-data.h"
 
 #include "PowerHintSession.h"
 #include <fmq/AidlMessageQueue.h>
@@ -83,6 +84,12 @@ namespace impl {
 #ifdef MODE_EXT
 extern bool isDeviceSpecificModeSupported(Mode type, bool* _aidl_return);
 extern bool setDeviceSpecificMode(Mode type, bool enabled);
+#endif
+
+#ifdef ENABLE_INTERACTION_BOOST
+static constexpr bool kInteractionBoostSupported = true;
+#else
+static constexpr bool kInteractionBoostSupported = false;
 #endif
 
 void setInteractive(bool interactive) {
@@ -164,14 +171,32 @@ ndk::ScopedAStatus Power::isModeSupported(Mode type, bool* _aidl_return) {
 }
 
 ndk::ScopedAStatus Power::setBoost(Boost type, int32_t durationMs) {
-    LOG(INFO) << "Power setBoost: " << static_cast<int32_t>(type)
-                << ", duration: " << durationMs;
+    if (!kInteractionBoostSupported || type != Boost::INTERACTION) {
+        return ndk::ScopedAStatus::ok();
+    }
+
+    std::lock_guard<std::mutex> lock(mInteractionBoostMutex);
+    if (durationMs < 0) {
+        if (mInteractionBoostHandle > 0) {
+            release_request(mInteractionBoostHandle);
+            mInteractionBoostHandle = 0;
+        }
+        return ndk::ScopedAStatus::ok();
+    }
+
+    // A zero duration uses the timeout in powerhint.xml.
+    const int handle = perf_hint_enable(INTERACTION_HINT, durationMs);
+    if (handle > 0) {
+        if (mInteractionBoostHandle > 0 && mInteractionBoostHandle != handle) {
+            release_request(mInteractionBoostHandle);
+        }
+        mInteractionBoostHandle = handle;
+    }
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus Power::isBoostSupported(Boost type, bool* _aidl_return) {
-    LOG(INFO) << "Power isBoostSupported: " << static_cast<int32_t>(type);
-    *_aidl_return = false;
+    *_aidl_return = kInteractionBoostSupported && type == Boost::INTERACTION;
     return ndk::ScopedAStatus::ok();
 }
 
@@ -286,7 +311,8 @@ int64_t bitsForEnum() {
 ndk::ScopedAStatus Power::getSupportInfo(SupportInfo* _aidl_return) {
     static SupportInfo supportInfo = {
                                     .usesSessions = true,
-                                    .boosts = 0b0,
+                                    .boosts = kInteractionBoostSupported
+                                            ? int64_t{1} << static_cast<int32_t>(Boost::INTERACTION) : 0,
                                     .modes = 0b10001100,
                                     .sessionHints = 0b1100001111,
                                     .sessionModes = 0b0011,

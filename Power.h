@@ -35,6 +35,7 @@
 #define ANDROID_HARDWARE_POWER_POWER_H
 
 #include <aidl/android/hardware/power/BnPower.h>
+#include <mutex>
 #include "aidl/android/hardware/power/SessionTag.h"
 #include "power-common.h"
 
@@ -72,6 +73,10 @@ class Power : public BnPower {
 	                                     GpuHeadroomResult* _aidl_return) override;
         ndk::ScopedAStatus sendCompositionData(const std::vector<CompositionData>& in_data) override;
         ndk::ScopedAStatus sendCompositionUpdate(const CompositionUpdate& in_update) override;
+
+    private:
+        std::mutex mInteractionBoostMutex;
+        int mInteractionBoostHandle = 0;
 };
 
 }  // namespace impl
